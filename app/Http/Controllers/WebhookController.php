@@ -101,6 +101,7 @@ class WebhookController extends Controller
         $from = $payload['sender'] ?? $payload['phone'] ?? '';
         $messageBody = $payload['message'] ?? '';
         $messageId = $payload['messageId'] ?? uniqid();
+        $isGroup = isset($payload['isGroup']) && $payload['isGroup'] == true;
 
         // Skip pesan dari bot sendiri
         if (isset($payload['fromMe']) && $payload['fromMe'] == true) {
@@ -108,23 +109,49 @@ class WebhookController extends Controller
             return response()->json(['status' => 'ok']);
         }
 
-        // Skip pesan dari grup (group chat)
-        // Fonnte mengirim field 'isGroup' atau nomor berakhiran @g.us untuk grup
-        if (isset($payload['isGroup']) && $payload['isGroup'] == true) {
-            Log::info('Skipped: Group message', ['from' => $from, 'isGroup' => true]);
-            return response()->json(['status' => 'ok']);
-        }
-        
-        // Juga cek format nomor grup (biasanya endswith @g.us)
-        if (str_contains($from, '@g.us')) {
-            Log::info('Skipped: Group message (detected from sender format)', ['from' => $from]);
-            return response()->json(['status' => 'ok']);
-        }
-
         // IMPORTANT: Cek apakah pesan ini sudah pernah diproses (deduplikasi)
         $existingMessage = Pesan::where('whatsapp_message_id', $messageId)->first();
         if ($existingMessage) {
             Log::info('Skipped: Duplicate message (already processed)', ['messageId' => $messageId, 'from' => $from]);
+            return response()->json(['status' => 'ok']);
+        }
+
+        // Untuk pesan grup, hanya proses kalau ada mention atau pesan khusus
+        if ($isGroup || str_contains($from, '@g.us')) {
+            Log::info('Group message detected', ['from' => $from, 'message' => $messageBody]);
+            
+            // Hanya balas kalau ada mention (@) atau keyword khusus
+            // Atau bisa skip sepenuhnya kalau tidak mau bot aktif di grup
+            // Untuk sekarang, kita skip auto-reply di grup tapi tetap log pesan
+            
+            // Simpan pesan grup ke database (optional, bisa di-comment kalau tidak perlu)
+            $kontak = Kontak::firstOrCreate(
+                ['nomor_whatsapp' => $from],
+                ['nama' => $payload['pushname'] ?? 'Group: ' . $from]
+            );
+
+            $percakapan = Percakapan::firstOrCreate(
+                ['kontak_id' => $kontak->id]
+            );
+
+            Pesan::create([
+                'percakapan_id' => $percakapan->id,
+                'arah_pesan' => 'masuk',
+                'jenis_pesan' => 'text',
+                'isi_pesan' => $messageBody,
+                'whatsapp_message_id' => $messageId,
+                'status' => 'delivered',
+                'raw_response' => $payload
+            ]);
+
+            $percakapan->update([
+                'pesan_terakhir' => $messageBody,
+                'waktu_pesan_terakhir' => now()
+            ]);
+
+            // Auto-reply di grup (akan diproses di method autoReply dengan logic khusus)
+            $this->autoReply($from, $messageBody, true); // true = isGroup
+            
             return response()->json(['status' => 'ok']);
         }
 
@@ -154,12 +181,12 @@ class WebhookController extends Controller
             'waktu_pesan_terakhir' => now()
         ]);
 
-        $this->autoReply($from, $messageBody);
+        $this->autoReply($from, $messageBody, false); // false = not group
 
         return response()->json(['status' => 'ok']);
     }
 
-    private function autoReply(string $from, string $message)
+    private function autoReply(string $from, string $message, bool $isGroup = false)
     {
         // Rate limiting: Cegah spam reply dalam 3 detik
         $cacheKey = "autoreply:{$from}:" . md5($message);
@@ -181,6 +208,40 @@ class WebhookController extends Controller
             return;
         }
 
+        // Untuk pesan grup, hanya balas kalau ada mention atau keyword tertentu
+        if ($isGroup) {
+            Log::info('Processing group message', ['from' => $from, 'message' => substr($message, 0, 50)]);
+            
+            // Cek apakah ada mention (dengan @ atau tanpa)
+            // Fonnte biasanya kirim mention dengan format @namabot
+            // Atau kita bisa cek keyword khusus untuk grup
+            
+            $messageLower = strtolower(trim($message));
+            
+            // Cek keyword-based reply untuk grup
+            $keyword = ChatbotKeyword::findByMessage($message);
+            if ($keyword) {
+                Log::info('Sending keyword reply to group', ['from' => $from, 'keyword' => $keyword->keywords]);
+                $this->whatsappService->sendText($from, $keyword->reply_message);
+                return;
+            }
+            
+            // Cek apakah pesan adalah nomor menu
+            if (is_numeric($messageLower)) {
+                $menu = ChatbotMenu::findByNumber((int)$messageLower);
+                if ($menu) {
+                    Log::info('Sending menu reply to group', ['from' => $from, 'menu_number' => $messageLower]);
+                    $this->whatsappService->sendText($from, $menu->reply_message);
+                    return;
+                }
+            }
+            
+            // Tidak ada reply untuk grup kalau tidak ada keyword/menu yang cocok
+            Log::info('No auto-reply for group message (no matching keyword/menu)');
+            return;
+        }
+
+        // Logic untuk chat personal (bukan grup)
         $replyAllMessages = ChatbotSetting::getSetting('reply_all_messages', 'true') === 'true';
         
         // Cek apakah pesan pertama dari nomor ini
