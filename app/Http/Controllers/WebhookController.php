@@ -149,8 +149,9 @@ class WebhookController extends Controller
                 'waktu_pesan_terakhir' => now()
             ]);
 
-            // Auto-reply di grup (akan diproses di method autoReply dengan logic khusus)
-            $this->autoReply($from, $messageBody, true); // true = isGroup
+            // TESTING MODE: Balas semua pesan grup
+            Log::info('Attempting auto-reply to group', ['from' => $from, 'message' => substr($messageBody, 0, 50)]);
+            $this->autoReply($from, $messageBody, true);
             
             return response()->json(['status' => 'ok']);
         }
@@ -210,18 +211,15 @@ class WebhookController extends Controller
 
         // Untuk pesan grup, hanya balas kalau ada mention atau keyword tertentu
         if ($isGroup) {
-            Log::info('Processing group message', ['from' => $from, 'message' => substr($message, 0, 50)]);
-            
-            // Cek apakah ada mention (dengan @ atau tanpa)
-            // Fonnte biasanya kirim mention dengan format @namabot
-            // Atau kita bisa cek keyword khusus untuk grup
+            Log::info('Processing group message for auto-reply', ['from' => $from, 'message' => substr($message, 0, 50)]);
             
             $messageLower = strtolower(trim($message));
             
+            // TESTING: Balas semua pesan di grup (hapus filter)
             // Cek keyword-based reply untuk grup
             $keyword = ChatbotKeyword::findByMessage($message);
             if ($keyword) {
-                Log::info('Sending keyword reply to group', ['from' => $from, 'keyword' => $keyword->keywords]);
+                Log::info('Found keyword match for group', ['keyword' => $keyword->keywords]);
                 $this->whatsappService->sendText($from, $keyword->reply_message);
                 return;
             }
@@ -230,14 +228,21 @@ class WebhookController extends Controller
             if (is_numeric($messageLower)) {
                 $menu = ChatbotMenu::findByNumber((int)$messageLower);
                 if ($menu) {
-                    Log::info('Sending menu reply to group', ['from' => $from, 'menu_number' => $messageLower]);
+                    Log::info('Found menu match for group', ['menu_number' => $messageLower]);
                     $this->whatsappService->sendText($from, $menu->reply_message);
                     return;
                 }
             }
             
-            // Tidak ada reply untuk grup kalau tidak ada keyword/menu yang cocok
-            Log::info('No auto-reply for group message (no matching keyword/menu)');
+            // TESTING: Kirim default reply untuk semua pesan grup yang tidak cocok
+            $defaultReply = ChatbotSetting::getSetting('default_reply');
+            if ($defaultReply) {
+                Log::info('Sending default reply to group');
+                $this->whatsappService->sendText($from, "Pesan grup diterima: " . substr($message, 0, 30));
+                return;
+            }
+            
+            Log::info('No reply sent to group (no matching keyword/menu/default)');
             return;
         }
 
