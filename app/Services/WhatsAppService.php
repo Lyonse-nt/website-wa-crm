@@ -12,17 +12,28 @@ class WhatsAppService
     private $phoneNumberId;
     private $version;
     private $baseUrl;
+    private $provider;
 
     public function __construct()
     {
+        $this->provider = config('services.whatsapp.provider', 'fonnte');
         $this->token = config('services.whatsapp.token');
         $this->phoneNumberId = config('services.whatsapp.phone_number_id');
         $this->version = config('services.whatsapp.version', 'v18.0');
-        $this->baseUrl = "https://graph.facebook.com/{$this->version}/{$this->phoneNumberId}";
+        
+        if ($this->provider === 'fonnte') {
+            $this->baseUrl = 'https://api.fonnte.com';
+        } else {
+            $this->baseUrl = "https://graph.facebook.com/{$this->version}/{$this->phoneNumberId}";
+        }
     }
 
     public function sendText(string $to, string $message)
     {
+        if ($this->provider === 'fonnte') {
+            return $this->sendFonnteMessage($to, $message);
+        }
+        
         $endpoint = "{$this->baseUrl}/messages";
         
         $payload = [
@@ -38,9 +49,56 @@ class WhatsAppService
 
         return $this->sendRequest($endpoint, $payload);
     }
+    
+    private function sendFonnteMessage(string $to, string $message, ?string $imageUrl = null, ?string $fileUrl = null)
+    {
+        $endpoint = "{$this->baseUrl}/send";
+        
+        $payload = [
+            'target' => $this->formatPhoneNumber($to),
+            'message' => $message,
+            'countryCode' => '62',
+        ];
+        
+        if ($imageUrl) {
+            $payload['url'] = $imageUrl;
+        }
+        
+        if ($fileUrl) {
+            $payload['file'] = $fileUrl;
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => $this->token,
+            ])->post($endpoint, $payload);
+
+            $this->logApi($endpoint, $payload, $response->json(), $response->status());
+
+            return [
+                'success' => $response->successful(),
+                'data' => $response->json(),
+                'status' => $response->status()
+            ];
+        } catch (\Exception $e) {
+            $this->logApi($endpoint, $payload, ['error' => $e->getMessage()], 500);
+            
+            Log::error('Fonnte API Error: ' . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'data' => ['error' => $e->getMessage()],
+                'status' => 500
+            ];
+        }
+    }
 
     public function sendImage(string $to, string $imageUrl, ?string $caption = null)
     {
+        if ($this->provider === 'fonnte') {
+            return $this->sendFonnteMessage($to, $caption ?? '', $imageUrl);
+        }
+        
         $endpoint = "{$this->baseUrl}/messages";
         
         $payload = [

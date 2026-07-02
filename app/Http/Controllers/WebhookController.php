@@ -37,9 +37,15 @@ class WebhookController extends Controller
     public function handle(Request $request)
     {
         $payload = $request->all();
-
         LogWebhook::create(['payload' => $payload]);
 
+        $provider = config('services.whatsapp.provider', 'fonnte');
+
+        if ($provider === 'fonnte') {
+            return $this->handleFonnteWebhook($payload);
+        }
+
+        // Meta/Facebook webhook format
         if (!isset($payload['entry'][0]['changes'][0]['value']['messages'][0])) {
             return response()->json(['status' => 'ok']);
         }
@@ -66,6 +72,51 @@ class WebhookController extends Controller
             'whatsapp_message_id' => $messageId,
             'status' => 'delivered',
             'raw_response' => $message
+        ]);
+
+        $percakapan->update([
+            'pesan_terakhir' => $messageBody,
+            'waktu_pesan_terakhir' => now()
+        ]);
+
+        $this->autoReply($from, $messageBody);
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    private function handleFonnteWebhook(array $payload)
+    {
+        // Fonnte webhook format: device, sender, message, etc.
+        if (!isset($payload['message'])) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        $from = $payload['sender'] ?? $payload['phone'] ?? '';
+        $messageBody = $payload['message'] ?? '';
+        $messageId = $payload['messageId'] ?? uniqid();
+
+        // Skip pesan dari bot sendiri
+        if (isset($payload['fromMe']) && $payload['fromMe'] == true) {
+            return response()->json(['status' => 'ok']);
+        }
+
+        $kontak = Kontak::firstOrCreate(
+            ['nomor_whatsapp' => $from],
+            ['nama' => $payload['pushname'] ?? $from]
+        );
+
+        $percakapan = Percakapan::firstOrCreate(
+            ['kontak_id' => $kontak->id]
+        );
+
+        Pesan::create([
+            'percakapan_id' => $percakapan->id,
+            'arah_pesan' => 'masuk',
+            'jenis_pesan' => 'text',
+            'isi_pesan' => $messageBody,
+            'whatsapp_message_id' => $messageId,
+            'status' => 'delivered',
+            'raw_response' => $payload
         ]);
 
         $percakapan->update([
