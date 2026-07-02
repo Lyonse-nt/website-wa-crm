@@ -70,6 +70,20 @@ WHATSAPP_BUSINESS_ACCOUNT_ID=your_business_account_id
 
 3. Database akan persistent dan **tidak reset** lagi setiap deploy
 
+### 6. Jalankan Seeder (First Time Only)
+
+Setelah deploy pertama kali, jalankan seeder sekali saja untuk setup chatbot:
+
+1. Buka Railway Dashboard
+2. Klik service aplikasi kamu
+3. Tab **"Settings"** → Scroll ke **"Deploy"**
+4. Atau gunakan Railway CLI:
+   ```bash
+   railway run php artisan db:seed --class=ChatbotSeeder
+   ```
+
+**Note:** Seeder tidak perlu dijalankan setiap deploy, cuma sekali saat setup awal.
+
 ---
 
 ## Verifikasi
