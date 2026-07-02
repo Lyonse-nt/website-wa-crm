@@ -12,6 +12,7 @@ use App\Models\ChatbotKeyword;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class WebhookController extends Controller
 {
@@ -120,6 +121,13 @@ class WebhookController extends Controller
             return response()->json(['status' => 'ok']);
         }
 
+        // IMPORTANT: Cek apakah pesan ini sudah pernah diproses (deduplikasi)
+        $existingMessage = Pesan::where('whatsapp_message_id', $messageId)->first();
+        if ($existingMessage) {
+            Log::info('Skipped: Duplicate message (already processed)', ['messageId' => $messageId, 'from' => $from]);
+            return response()->json(['status' => 'ok']);
+        }
+
         Log::info('Processing individual message', ['from' => $from, 'message' => $messageBody]);
 
         $kontak = Kontak::firstOrCreate(
@@ -153,9 +161,23 @@ class WebhookController extends Controller
 
     private function autoReply(string $from, string $message)
     {
+        // Rate limiting: Cegah spam reply dalam 3 detik
+        $cacheKey = "autoreply:{$from}:" . md5($message);
+        if (Cache::has($cacheKey)) {
+            Log::info('Rate limited: Auto-reply blocked (duplicate in last 3 seconds)', [
+                'from' => $from,
+                'message' => substr($message, 0, 50)
+            ]);
+            return;
+        }
+        
+        // Set cache untuk 3 detik
+        Cache::put($cacheKey, true, 3);
+
         // Cek apakah chatbot aktif
         $chatbotEnabled = ChatbotSetting::getSetting('chatbot_enabled', 'true') === 'true';
         if (!$chatbotEnabled) {
+            Log::info('Chatbot disabled, skipping auto-reply');
             return;
         }
 
@@ -166,17 +188,25 @@ class WebhookController extends Controller
             $query->where('nomor_whatsapp', $from);
         })->count() === 1;
 
+        Log::info('Auto-reply check', [
+            'from' => $from,
+            'isFirstMessage' => $isFirstMessage,
+            'replyAllMessages' => $replyAllMessages
+        ]);
+
         // Kirim welcome message untuk pesan pertama
         if ($isFirstMessage) {
             $welcomeMessage = ChatbotSetting::getSetting('welcome_message');
             if ($welcomeMessage) {
+                Log::info('Sending welcome message', ['from' => $from]);
                 $this->whatsappService->sendText($from, $welcomeMessage);
-                return;
+                return; // PENTING: Return setelah kirim welcome message
             }
         }
 
         // Jika tidak reply semua pesan dan bukan pesan pertama, skip
         if (!$replyAllMessages && !$isFirstMessage) {
+            Log::info('Skip auto-reply: not first message and reply_all_messages is false');
             return;
         }
 
@@ -186,21 +216,24 @@ class WebhookController extends Controller
         if (is_numeric($messageLower)) {
             $menu = ChatbotMenu::findByNumber((int)$messageLower);
             if ($menu) {
+                Log::info('Sending menu reply', ['from' => $from, 'menu_number' => $messageLower]);
                 $this->whatsappService->sendText($from, $menu->reply_message);
-                return;
+                return; // PENTING: Return setelah kirim menu
             }
         }
 
         // Cek keyword-based reply
         $keyword = ChatbotKeyword::findByMessage($message);
         if ($keyword) {
+            Log::info('Sending keyword reply', ['from' => $from, 'keyword' => $keyword->keywords]);
             $this->whatsappService->sendText($from, $keyword->reply_message);
-            return;
+            return; // PENTING: Return setelah kirim keyword reply
         }
 
         // Default reply
         $defaultReply = ChatbotSetting::getSetting('default_reply');
         if ($defaultReply) {
+            Log::info('Sending default reply', ['from' => $from]);
             $this->whatsappService->sendText($from, $defaultReply);
         }
     }
