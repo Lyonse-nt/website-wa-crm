@@ -64,9 +64,9 @@ class WhatsAppController extends Controller
         ]);
 
         if ($result['success']) {
-            return redirect()->back()->with('success', 'Pesan berhasil dikirim');
+            return redirect()->route('percakapan.show', $percakapan)->with('success', 'Pesan berhasil dikirim');
         }
 
-        return redirect()->back()->with('error', 'Pesan gagal dikirim');
+        return redirect()->route('percakapan.show', $percakapan)->with('error', 'Pesan gagal dikirim');
     }
 }

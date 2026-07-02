@@ -91,18 +91,18 @@
 
             <!-- Input Area -->
             <div class="px-6 py-4 border-t border-gray-200 bg-white">
-                <form action="{{ route('pesan.send') }}" method="POST" class="flex gap-3">
+                <form action="{{ route('pesan.send') }}" method="POST" class="flex gap-3" id="sendMessageForm">
                     @csrf
                     <input type="hidden" name="nomor_whatsapp" value="{{ $selectedPercakapan->kontak->nomor_whatsapp }}">
-                    <textarea name="pesan" rows="1" 
+                    <textarea name="pesan" rows="1" id="pesanInput"
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
                         placeholder="Ketik pesan..." required></textarea>
-                    <button type="submit" 
+                    <button type="submit" id="submitBtn"
                         class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                         </svg>
-                        Kirim
+                        <span id="btnText">Kirim</span>
                     </button>
                 </form>
             </div>
@@ -121,3 +121,38 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('sendMessageForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const pesanInput = document.getElementById('pesanInput');
+    
+    if (form) {
+        let isSubmitting = false;
+        
+        form.addEventListener('submit', function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
+            
+            isSubmitting = true;
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            btnText.textContent = 'Mengirim...';
+            
+            // Reset after 5 seconds as failsafe
+            setTimeout(() => {
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = 'Kirim';
+            }, 5000);
+        });
+    }
+});
+</script>
+@endpush
