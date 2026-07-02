@@ -264,6 +264,18 @@ Inspirasi desain dari:
 - Cek `WHATSAPP_WEBHOOK_VERIFY_TOKEN` sama dengan yang di Meta
 - Subscribe ke event `messages` di Meta
 
+### Bot Tidak Balas di Grup WhatsApp
+⚠️ **WhatsApp Business Cloud API tidak support grup**. Ini adalah limitasi dari Meta/WhatsApp:
+- Bot hanya bisa terima dan balas pesan **personal/private chat**
+- Bot tidak bisa baca pesan di grup
+- Bot tidak bisa join grup
+- Ini berlaku untuk semua bot yang pakai WhatsApp Cloud API (gratis)
+
+**Solusi:** Arahkan user untuk chat personal dengan bot, bukan di grup.
+
+### Tombol Edit Chatbot Tidak Berfungsi
+Sudah diperbaiki dengan menggunakan `@json()` directive untuk proper escaping.
+
 ### Database Error
 ```bash
 php artisan migrate:fresh

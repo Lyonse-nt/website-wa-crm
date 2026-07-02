@@ -85,7 +85,7 @@
                             <p class="text-sm text-gray-600 whitespace-pre-line">{{ $menu->reply_message }}</p>
                         </div>
                         <div class="flex gap-2 ml-4">
-                            <button onclick="editMenu({{ $menu->id }}, {{ $menu->menu_number }}, '{{ addslashes($menu->menu_label) }}', '{{ addslashes($menu->reply_message) }}', {{ $menu->is_active ? 'true' : 'false' }})" class="text-blue-600 hover:text-blue-800">
+                            <button type="button" onclick='editMenu(@json($menu->id), @json($menu->menu_number), @json($menu->menu_label), @json($menu->reply_message), @json($menu->is_active))' class="text-blue-600 hover:text-blue-800">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
@@ -139,7 +139,7 @@
                             <p class="text-sm text-gray-600 whitespace-pre-line">{{ $keyword->reply_message }}</p>
                         </div>
                         <div class="flex gap-2 ml-4">
-                            <button onclick="editKeyword({{ $keyword->id }}, '{{ addslashes($keyword->keywords) }}', '{{ addslashes($keyword->reply_message) }}', '{{ $keyword->priority }}', {{ $keyword->is_active ? 'true' : 'false' }})" class="text-blue-600 hover:text-blue-800">
+                            <button type="button" onclick='editKeyword(@json($keyword->id), @json($keyword->keywords), @json($keyword->reply_message), @json($keyword->priority), @json($keyword->is_active))' class="text-blue-600 hover:text-blue-800">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>

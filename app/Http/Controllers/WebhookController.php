@@ -89,6 +89,9 @@ class WebhookController extends Controller
 
     private function handleFonnteWebhook(array $payload)
     {
+        // Log payload untuk debugging
+        Log::info('Fonnte Webhook Received:', $payload);
+
         // Fonnte webhook format: device, sender, message, etc.
         if (!isset($payload['message'])) {
             return response()->json(['status' => 'ok']);
@@ -100,8 +103,24 @@ class WebhookController extends Controller
 
         // Skip pesan dari bot sendiri
         if (isset($payload['fromMe']) && $payload['fromMe'] == true) {
+            Log::info('Skipped: Message from self', ['from' => $from]);
             return response()->json(['status' => 'ok']);
         }
+
+        // Skip pesan dari grup (group chat)
+        // Fonnte mengirim field 'isGroup' atau nomor berakhiran @g.us untuk grup
+        if (isset($payload['isGroup']) && $payload['isGroup'] == true) {
+            Log::info('Skipped: Group message', ['from' => $from, 'isGroup' => true]);
+            return response()->json(['status' => 'ok']);
+        }
+        
+        // Juga cek format nomor grup (biasanya endswith @g.us)
+        if (str_contains($from, '@g.us')) {
+            Log::info('Skipped: Group message (detected from sender format)', ['from' => $from]);
+            return response()->json(['status' => 'ok']);
+        }
+
+        Log::info('Processing individual message', ['from' => $from, 'message' => $messageBody]);
 
         $kontak = Kontak::firstOrCreate(
             ['nomor_whatsapp' => $from],
