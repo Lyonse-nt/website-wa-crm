@@ -1,0 +1,8 @@
+version: "2"
+authtoken: YOUR_NGROK_AUTHTOKEN
+tunnels:
+  webhook:
+    addr: 8000
+    proto: http
+    inspect: false
+    bind_tls: true
