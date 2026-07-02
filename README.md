@@ -300,6 +300,17 @@ public function sendTemplate($to, $templateName, $parameters)
 }
 ```
 
+## 🌐 Deploy ke Railway
+
+Untuk deployment production ke Railway:
+
+1. **Baca dokumentasi lengkap**: [RAILWAY_SETUP.md](RAILWAY_SETUP.md)
+2. **Gunakan PostgreSQL** (bukan SQLite) agar data tidak hilang
+3. Setup environment variables di Railway dashboard
+4. Connect GitHub repo untuk auto-deploy
+
+⚠️ **PENTING**: Railway menggunakan ephemeral filesystem. Jika menggunakan SQLite, data akan **hilang setiap deploy**. Gunakan PostgreSQL yang disediakan Railway (gratis).
+
 ## 🚀 Next Steps
 
 Setelah paham dengan project ini, kamu bisa kembangkan:
