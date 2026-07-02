@@ -6,6 +6,9 @@ use App\Models\Kontak;
 use App\Models\Percakapan;
 use App\Models\Pesan;
 use App\Models\LogWebhook;
+use App\Models\ChatbotSetting;
+use App\Models\ChatbotMenu;
+use App\Models\ChatbotKeyword;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -131,16 +134,55 @@ class WebhookController extends Controller
 
     private function autoReply(string $from, string $message)
     {
-        $message = strtolower(trim($message));
+        // Cek apakah chatbot aktif
+        $chatbotEnabled = ChatbotSetting::getSetting('chatbot_enabled', 'true') === 'true';
+        if (!$chatbotEnabled) {
+            return;
+        }
 
-        $replies = [
-            'halo' => "Halo juga 👋\nAda yang bisa kami bantu?",
-            'menu' => "📋 Menu:\n1. Informasi\n2. Bantuan\n3. Kontak Admin",
-            'info' => "ℹ️ Ini adalah sistem CRM WhatsApp otomatis.\nKami akan segera merespon pesan Anda.",
-        ];
+        $replyAllMessages = ChatbotSetting::getSetting('reply_all_messages', 'true') === 'true';
+        
+        // Cek apakah pesan pertama dari nomor ini
+        $isFirstMessage = Pesan::whereHas('percakapan.kontak', function ($query) use ($from) {
+            $query->where('nomor_whatsapp', $from);
+        })->count() === 1;
 
-        if (isset($replies[$message])) {
-            $this->whatsappService->sendText($from, $replies[$message]);
+        // Kirim welcome message untuk pesan pertama
+        if ($isFirstMessage) {
+            $welcomeMessage = ChatbotSetting::getSetting('welcome_message');
+            if ($welcomeMessage) {
+                $this->whatsappService->sendText($from, $welcomeMessage);
+                return;
+            }
+        }
+
+        // Jika tidak reply semua pesan dan bukan pesan pertama, skip
+        if (!$replyAllMessages && !$isFirstMessage) {
+            return;
+        }
+
+        $messageLower = strtolower(trim($message));
+
+        // Cek apakah pesan adalah nomor menu (1, 2, 3, dll)
+        if (is_numeric($messageLower)) {
+            $menu = ChatbotMenu::findByNumber((int)$messageLower);
+            if ($menu) {
+                $this->whatsappService->sendText($from, $menu->reply_message);
+                return;
+            }
+        }
+
+        // Cek keyword-based reply
+        $keyword = ChatbotKeyword::findByMessage($message);
+        if ($keyword) {
+            $this->whatsappService->sendText($from, $keyword->reply_message);
+            return;
+        }
+
+        // Default reply
+        $defaultReply = ChatbotSetting::getSetting('default_reply');
+        if ($defaultReply) {
+            $this->whatsappService->sendText($from, $defaultReply);
         }
     }
 }
