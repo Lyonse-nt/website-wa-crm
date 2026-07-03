@@ -70,21 +70,21 @@
             @if($menus->count() > 0)
             <div class="space-y-3 mb-6">
                 @foreach($menus as $menu)
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">Menu {{ $menu->menu_number }}</span>
-                                <span class="text-sm font-medium text-gray-800">{{ $menu->menu_label }}</span>
+                <div class="border border-gray-200 rounded-lg p-3 sm:p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded whitespace-nowrap">Menu {{ $menu->menu_number }}</span>
+                                <span class="text-sm font-medium text-gray-800 break-words">{{ $menu->menu_label }}</span>
                                 @if($menu->is_active)
-                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">Aktif</span>
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded whitespace-nowrap">Aktif</span>
                                 @else
-                                <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">Nonaktif</span>
+                                <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded whitespace-nowrap">Nonaktif</span>
                                 @endif
                             </div>
-                            <p class="text-sm text-gray-600 whitespace-pre-line">{{ $menu->reply_message }}</p>
+                            <p class="text-sm text-gray-600 whitespace-pre-line break-words">{{ $menu->reply_message }}</p>
                         </div>
-                        <div class="flex gap-2 ml-4">
+                        <div class="flex gap-2 sm:ml-4 flex-shrink-0">
                             <button type="button" onclick='editMenu(@json($menu->id), @json($menu->menu_number), @json($menu->menu_label), @json($menu->reply_message), @json($menu->is_active))' class="text-blue-600 hover:text-blue-800">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -122,23 +122,23 @@
             @if($keywords->count() > 0)
             <div class="space-y-3 mb-6">
                 @foreach($keywords as $keyword)
-                <div class="border border-gray-200 rounded-lg p-4">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="px-2 py-1 text-xs font-semibold rounded
+                <div class="border border-gray-200 rounded-lg p-3 sm:p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                <span class="px-2 py-1 text-xs font-semibold rounded whitespace-nowrap
                                     {{ $keyword->priority === 'high' ? 'bg-red-100 text-red-700' : '' }}
                                     {{ $keyword->priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : '' }}
                                     {{ $keyword->priority === 'low' ? 'bg-gray-100 text-gray-700' : '' }}
                                 ">{{ ucfirst($keyword->priority) }}</span>
-                                <span class="text-sm font-medium text-gray-800">{{ $keyword->keywords }}</span>
+                                <span class="text-sm font-medium text-gray-800 break-words">{{ $keyword->keywords }}</span>
                                 @if($keyword->is_active)
-                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">Aktif</span>
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded whitespace-nowrap">Aktif</span>
                                 @endif
                             </div>
-                            <p class="text-sm text-gray-600 whitespace-pre-line">{{ $keyword->reply_message }}</p>
+                            <p class="text-sm text-gray-600 whitespace-pre-line break-words">{{ $keyword->reply_message }}</p>
                         </div>
-                        <div class="flex gap-2 ml-4">
+                        <div class="flex gap-2 sm:ml-4 flex-shrink-0">
                             <button type="button" onclick='editKeyword(@json($keyword->id), @json($keyword->keywords), @json($keyword->reply_message), @json($keyword->priority), @json($keyword->is_active))' class="text-blue-600 hover:text-blue-800">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
