@@ -47,11 +47,11 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <!-- Back button untuk mobile -->
-                        <a href="{{ route('percakapan.index') }}" class="lg:hidden text-gray-600 hover:text-gray-900">
+                        <button type="button" id="back-to-list" class="lg:hidden text-gray-600 hover:text-gray-900">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                             </svg>
-                        </a>
+                        </button>
                         <div>
                             <h3 class="font-semibold text-gray-900">{{ $selectedPercakapan->kontak->nama }}</h3>
                             <p class="text-xs text-gray-600 mt-1">{{ $selectedPercakapan->kontak->nomor_whatsapp }}</p>
@@ -133,6 +133,27 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Back button mobile
+    const backBtn = document.getElementById('back-to-list');
+    const chatList = document.getElementById('chat-list');
+    const chatArea = document.getElementById('chat-area');
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            // Hide chat area, show list
+            chatArea.classList.add('hidden');
+            chatArea.classList.remove('flex');
+            chatList.classList.remove('hidden');
+            chatList.classList.add('flex');
+            
+            // Remove selected param from URL
+            const url = new URL(window.location);
+            url.pathname = url.pathname.split('/').slice(0, -1).join('/') || '/percakapan';
+            window.history.pushState({}, '', url);
+        });
+    }
+    
+    // Form submit prevention
     const form = document.getElementById('sendMessageForm');
     const submitBtn = document.getElementById('submitBtn');
     const btnText = document.getElementById('btnText');
